@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: #000;
+            display: block;
+            background-image: url('bg coding'); /* Add your background image here */
+            background-size: cover;
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+        }
+        #endScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-size: 24px;
+            display: none;
+        }
+        #restartButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #444;
+            border: none;
+            color: gray;
+            cursor: pointer;
+        }
+        #restartButton:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreBoard">
+        <div>Player: <span id="playerScore">0</span></div>
+        <div>AI: <span id="aiScore">0</span></div>
+    </div>
+    <div id="endScreen">
+        <div id="endMessage"></div>
+        <button id="restartButton" onclick="restartGame()">Restart Game</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const endScreen = document.getElementById('endScreen');
+        const endMessage = document.getElementById('endMessage');
+
+        const paddleWidth = 10;
+        const paddleHeight = 150;
+        const ballRadius = 10;
+
+        let playerY = (canvas.height - paddleHeight) / 2;
+        let aiY = (canvas.height - paddleHeight) / 2;
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        let ballSpeedX = 4;
+        let ballSpeedY = 2;
+
+    
+        
+
+        let playerScore = 0;
+        let aiScore = 0;
+        const winningScore = 5;
+
+        const hitSound = new Audio('hit.mp3'); // Add your sound files here
+        const scoreSound = new Audio('score.mp3');
+
+        document.addEventListener('mousemove', movePaddle);
+
+        function movePaddle(event) {
+            const rect = canvas.getBoundingClientRect();
+            const root = document.documentElement;
+            const mouseY = event.clientY - rect.top - root.scrollTop;
+            playerY = mouseY - paddleHeight / 2;
+        }
+
+        function drawRect(x, y, width, height, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+        }
+
+        function drawCircle(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2, true);
+            ctx.fill();
+        }
+
+        function showEndScreen(winner) {
+            endMessage.textContent = `${winner} wins!`;
+            endScreen.style.display = 'flex';
+        }
+
+        function hideEndScreen() {
+            endScreen.style.display = 'none';
+        }
+
+        function resetBall() {
+            if (playerScore >= winningScore || aiScore >= winningScore) {
+                const winner = playerScore >= winningScore ? 'Player' : 'AI';
+                showEndScreen(winner);
+                playerScore = 0;
+                aiScore = 0;
+            }
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballSpeedX = -ballSpeedX;
+            ballSpeedY = (Math.random() - 0.5) * 10;
+        }
+
+        function restartGame() {
+            hideEndScreen();
+            playerScore = 0;
+            aiScore = 0;
+            updateScore();
+            resetBall();
+            gameLoop();
+        }
+
+        function moveBall() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            if (ballX - ballRadius < paddleWidth) {
+                if (ballY > playerY && ballY < playerY + paddleHeight) {
+                    ballSpeedX = -ballSpeedX;
+                    let deltaY = ballY - (playerY + paddleHeight / 2);
+                    ballSpeedY = deltaY * 0.35;
+                    hitSound.play();
+                } else {
+                    aiScore++;
+                    updateScore();
+                    scoreSound.play();
+                    resetBall();
+                }
+            }
+
+            if (ballX + ballRadius > canvas.width - paddleWidth) {
+                if (ballY > aiY && ballY < aiY + paddleHeight) {
+                    ballSpeedX = -ballSpeedX;
+                    let deltaY = ballY - (aiY + paddleHeight / 2);
+                    ballSpeedY = deltaY * 0.35;
+                    hitSound.play();
+                } else {
+                    playerScore++;
+                    updateScore();
+                    scoreSound.play();
+                    resetBall();
+                }
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('playerScore').innerText = playerScore;
+            document.getElementById('aiScore').innerText = aiScore;
+        }
+
+        function moveAI() {
+            const aiCenter = aiY + paddleHeight / 2;
+            if (aiCenter < ballY - 35) {
+                aiY += 6;
+            } else if (aiCenter > ballY + 35) {
+                aiY -= 6;
+            }
+        }
+
+        function draw() {
+            drawRect(0, 0, canvas.width, canvas.height, 'black');
+            drawRect(0, playerY, paddleWidth, paddleHeight, 'red');
+            drawRect(canvas.width - paddleWidth, aiY, paddleWidth, paddleHeight, 'blue');
+            drawCircle(ballX, ballY, ballRadius, 'orange');
+        }
+
+        function gameLoop() {
+            moveBall();
+            moveAI();
+            draw();
+            if (playerScore < winningScore && aiScore < winningScore) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
